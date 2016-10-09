@@ -64,7 +64,7 @@ class DataSet(object):
   def next_batch(self, batch_size, fake_data=False):
     """Return the next `batch_size` examples from this data set."""
     if fake_data:
-      fake_image = [1] * 784
+      fake_image = [1] * 1024
       if self.one_hot:
         fake_label = [1] + [0] * 9
       else:
@@ -95,7 +95,7 @@ def importDataset(data_type, dataset_directory):
 	labels = []
 	# Creating image matrix
 	for filename in glob.glob(dataset_directory + data_type + '/*.png'):
-		im = misc.imread(filename)
+		im = misc.imresize(misc.imread(filename),0.2)
 		im.resize([1,im.shape[0]*im.shape[1]]) #assuming a 2D input
 		images.append(im[0])
 	images = numpy.array(images)

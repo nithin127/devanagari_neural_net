@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Builds the MNIST network.
+"""Builds the Devanagri network.
 
 Implements the inference/loss/training pattern for model building.
 
@@ -34,10 +34,10 @@ import math
 
 import tensorflow as tf
 
-# The MNIST dataset has 10 classes, representing the digits 0 through 9.
+# The Devanagri dataset has 104 classes, representing all the different symbols.
 NUM_CLASSES = 104
-# The MNIST images are always 28x28 pixels.
-IMAGE_SIZE = 320
+# The Devanagri images are always scaled to 64x64.
+IMAGE_SIZE = 64
 
 IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
 

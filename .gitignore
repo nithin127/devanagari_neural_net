@@ -36,12 +36,18 @@
 ehthumbs.db
 Thumbs.db
 
-
-# pdfs and images
+# pdfs and images #
+###################
 *.png
 *.pdf
 
-#python
+# python #
+##########
 *.pyc
 *.pickle
 *.p
+
+# tensorflow #
+##############
+checkpoint*
+events*
