@@ -12,8 +12,7 @@ class DataSet(object):
                labels,
                fake_data=False,
                one_hot=False,
-               dtype=dtypes.float32,
-               reshape=False):
+               dtype=dtypes.float32):
 
     """Construct a DataSet. one_hot arg is used only if fake_data is true.  `dtype` can be either 
     `uint8` to leave the input as `[0, 255]`, or `float32` to rescale into `[0, 1]` """
@@ -32,14 +31,11 @@ class DataSet(object):
 
       # Convert shape from [num examples, rows, columns, depth]
       # to [num examples, rows*columns] (assuming depth == 1)
-      if reshape:
-        assert images.shape[3] == 1
-        images = images.reshape(images.shape[0],
-                                images.shape[1] * images.shape[2])
       if dtype == dtypes.float32:
         # Convert from [0, 255] -> [0.0, 1.0].
         images = images.astype(numpy.float32)
         images = numpy.multiply(images, 1.0 / 255.0)
+    
     self._images = images
     self._labels = labels
     self._epochs_completed = 0
@@ -91,45 +87,48 @@ class DataSet(object):
 
 
 def importDataset(data_type, dataset_directory):
-	images = []
-	labels = []
-	# Creating image matrix
-	for filename in glob.glob(dataset_directory + data_type + '/*.png'):
-		im = misc.imresize(misc.imread(filename),0.2)
-		im.resize([1,im.shape[0]*im.shape[1]]) #assuming a 2D input
-		images.append(im[0])
-	images = numpy.array(images)
-	# Creating label list
-	for filename in glob.glob(dataset_directory + data_type + '/labels.txt'):
-		label_file = open(filename)
-	labels = label_file.readlines()
-	labels = [int(x[:-1]) for x in labels]
-	# Nothing
-	return images, numpy.array(labels).astype('uint8')
+  images = []
+  labels = []
+  # Creating image matrix
+  for filename in glob.glob(dataset_directory + data_type + '/*.png'):
+  	im = misc.imresize(misc.imread(filename),0.2)
+  	images.append(im)
+  images = numpy.array(images)
+  images = images.reshape(-1,images.shape[1],images.shape[2],1) # This place a role in the convolution layers
+  # Creating label list
+  for filename in glob.glob(dataset_directory + data_type + '/labels.txt'):
+  	label_file = open(filename)
+  labels = label_file.readlines()
+  labels = [int(x[:-1]) for x in labels]
+  # Nothing
+  return images, numpy.array(labels).astype('uint8')
 
 
-def getDataset(dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/asgn/devnagari/dataset/', validation = True):
-	
-	Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
+def getDataset(dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/asgn/devnagari/dataset/', validation = False):
 
-	test, test_labels = importDataset('test', dataset_directory)
-	train, train_labels = importDataset('train', dataset_directory)
-	
-	if not validation:
-		train = DataSet(train, train_labels)
-		test = DataSet(test, test_labels)
-		return Datasets(train=train, test=test)
-	else:
-		valid = train[int(round(train.shape[0]*0.9)):,:]
-		train2 = train[:int(round(train.shape[0]*0.9)),:]
-		valid_labels = train_labels[int(round(train.shape[0]*0.9)):]
-		train_labels2 = train_labels[:int(round(train.shape[0]*0.9))]
+  test, test_labels = importDataset('test', dataset_directory)
+  #train, train_labels = importDataset('train', dataset_directory)
+  train, train_labels = (test, test_labels)
+
+  if not validation:
+    Datasets = collections.namedtuple('Datasets', ['train', 'test'])
+    train = DataSet(train, train_labels)
+    test = DataSet(test, test_labels)
+    return Datasets(train=train, test=test)
+  else:
+    Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
+    # Shuffling the training dataset
+    perm = numpy.arange(train.shapep[0])
+    numpy.random.shuffle(perm)
+    train = train[perm]
+    train_labels = train_labels[perm]
+    # Distributing 10% of train into validation
+    valid = train[int(round(train.shape[0]*0.9)):,:]
+    train2 = train[:int(round(train.shape[0]*0.9)),:]
+    valid_labels = train_labels[int(round(train.shape[0]*0.9)):]
+    train_labels2 = train_labels[:int(round(train.shape[0]*0.9))]
     # Embedding the information into DataSet class
-		train = DataSet(train2, train_labels2)
-		valid = DataSet(valid, valid_labels)
-		test = DataSet(test, test_labels)
-		return Datasets(train=train, validation=valid, test=test)
-
-
-
-
+    train = DataSet(train2, train_labels2)
+    valid = DataSet(valid, valid_labels)
+    test = DataSet(test, test_labels)
+    return Datasets(train=train, validation=valid, test=test)

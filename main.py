@@ -23,8 +23,12 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 flags.DEFINE_integer('max_steps', 200000, 'Number of steps to run trainer.')
-flags.DEFINE_integer('hidden1', 128, 'Number of units in hidden layer 1.')
-flags.DEFINE_integer('hidden2', 32, 'Number of units in hidden layer 2.')
+flags.DEFINE_integer('receptive_field', 3, 'Side length of field of view in convolution layers.')
+flags.DEFINE_integer('conv1_depth', 32, 'Depth of convolution layer 1.')
+flags.DEFINE_integer('conv2_depth', 64, 'Depth of convolution layer 2.')
+flags.DEFINE_integer('conv3_depth', 128, 'Depth of convolution layer 3.')
+flags.DEFINE_integer('hidden1', 512, 'Number of units in hidden layer 1.')
+flags.DEFINE_integer('hidden2', 128, 'Number of units in hidden layer 2.')
 flags.DEFINE_integer('batch_size', 100, 'Batch size.  '
                      'Must divide evenly into the dataset sizes.')
 flags.DEFINE_string('train_dir', dataset_directory, 'Directory to put the training data.')
@@ -47,8 +51,8 @@ def placeholder_inputs(batch_size):
   # Note that the shapes of the placeholders match the shapes of the full
   # image and label tensors, except the first dimension is now batch_size
   # rather than the full size of the train or test data sets.
-  images_placeholder = tf.placeholder(tf.float32, shape=(batch_size,
-                                                         network_structure.IMAGE_PIXELS))
+  images_placeholder = tf.placeholder(tf.float32, shape=(batch_size, network_structure.IMAGE_SIZE, 
+                                                        network_structure.IMAGE_SIZE,1))
   labels_placeholder = tf.placeholder(tf.int32, shape=(batch_size))
   return images_placeholder, labels_placeholder
 
@@ -126,8 +130,12 @@ def run_training():
 
     # Build a Graph that computes predictions from the inference model.
     logits = network_structure.inference(images_placeholder,
+    	                     FLAGS.conv1_depth,
+    	                     FLAGS.conv2_depth,
+    	                     FLAGS.conv3_depth,
                              FLAGS.hidden1,
-                             FLAGS.hidden2)
+                             FLAGS.hidden2,
+                             FLAGS.receptive_field)
 
     # Add to the Graph the Ops for loss calculation.
     loss = network_structure.loss(logits, labels_placeholder)

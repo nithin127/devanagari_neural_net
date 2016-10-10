@@ -1,16 +1,5 @@
-# Copyright 2015 The TensorFlow Authors. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/tensorflow/tensorflow/blob/r0.11/tensorflow/examples/tutorials/mnist/mnist.py
 # ==============================================================================
 
 """Builds the Devanagri network.
@@ -23,8 +12,6 @@ forward to make predictions.
 3. training() - Adds to the loss model the Ops required to generate and
 apply gradients.
 
-This file is used by the various "fully_connected_*.py" files and not meant to
-be run.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -36,13 +23,14 @@ import tensorflow as tf
 
 # The Devanagri dataset has 104 classes, representing all the different symbols.
 NUM_CLASSES = 104
-# The Devanagri images are always scaled to 64x64.
-IMAGE_SIZE = 64
-
+IMAGE_SIZE = 64 # After downscaling by 80%, input is 64x64x1
 IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
 
+# Probability assignments for dropouts
+PROB_CONV = 0.8
+PROB_HIDD = 0.5 # We're not implementing dropout in hidden layer in this iteration
 
-def inference(images, hidden1_units, hidden2_units):
+def inference(images, conv1_depth, conv2_depth, conv3_depth, hidden1_units, hidden2_units, receptive_field):
   """Build the MNIST model up to where it may be used for inference.
 
   Args:
@@ -53,15 +41,59 @@ def inference(images, hidden1_units, hidden2_units):
   Returns:
     softmax_linear: Output tensor with the computed logits.
   """
+  # Constructing shapes of convolution layers using user input
+  SHAPE_1 = [receptive_field, receptive_field, 1, conv1_depth]
+  SHAPE_2 = [receptive_field, receptive_field, conv1_depth, conv2_depth]
+  SHAPE_3 = [receptive_field, receptive_field, conv2_depth, conv3_depth]
+  # Fully connected layers
+  SHAPE_4 = [int(conv3_depth * (IMAGE_SIZE / 8) * (IMAGE_SIZE / 8)), hidden1_units]
+
+  # Convolutional Layer 1
+  with tf.name_scope('convolution1'):
+    weights = tf.Variable(
+      tf.truncated_normal(SHAPE_1, stddev=1.0 / math.sqrt(float(IMAGE_PIXELS))),
+      name = 'weights')
+    conv1 = tf.nn.relu(tf.nn.conv2d(images, weights,            # conv1 shape=(?, 64, 64, 32)
+                        strides=[1, 1, 1, 1], padding='SAME'))
+    conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1],             # conv1 shape=(?, 32, 32, 32)
+                        strides=[1, 2, 2, 1], padding='SAME')
+    conv1 = tf.nn.dropout(conv1, PROB_CONV)
+
+  # Convolutional Layer 2
+  with tf.name_scope('convolution2'):
+    conv1_units = reduce(lambda x, y: x*y, conv1.get_shape().as_list())
+    weights = tf.Variable(
+      tf.truncated_normal(SHAPE_2, stddev=1.0 / math.sqrt(float(conv1_units))),
+      name = 'weights')
+    conv2 = tf.nn.relu(tf.nn.conv2d(conv1, weights,            # conv2 shape=(?, 32, 32, 64)
+                        strides=[1, 1, 1, 1], padding='SAME'))
+    conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1],             # conv2 shape=(?, 16, 16, 64)
+                        strides=[1, 2, 2, 1], padding='SAME')
+    conv2 = tf.nn.dropout(conv2, PROB_CONV)
+
+  # Convolutional Layer 3
+  with tf.name_scope('convolution3'):
+    conv2_units = reduce(lambda x, y: x*y, conv2.get_shape().as_list())
+    weights = tf.Variable(
+      tf.truncated_normal(SHAPE_3, stddev=1.0 / math.sqrt(float(conv2_units))),
+      name = 'weights')
+    conv3 = tf.nn.relu(tf.nn.conv2d(conv2, weights,            # conv2 shape=(?, 16, 16, 128)
+                        strides=[1, 1, 1, 1], padding='SAME'))
+    conv3 = tf.nn.max_pool(conv3, ksize=[1, 2, 2, 1],             # conv2 shape=(?, 8, 8, 128)
+                        strides=[1, 2, 2, 1], padding='SAME')
+    conv3 = tf.reshape(conv3, [-1, SHAPE_4[0]])    # reshape to (?, 8192)
+    conv3 = tf.nn.dropout(conv3, PROB_CONV)
+
   # Hidden 1
   with tf.name_scope('hidden1'):
+    conv3_units = reduce(lambda x, y: x*y, conv3.get_shape().as_list())
     weights = tf.Variable(
-        tf.truncated_normal([IMAGE_PIXELS, hidden1_units],
-                            stddev=1.0 / math.sqrt(float(IMAGE_PIXELS))),
+        tf.truncated_normal(SHAPE_4,
+                            stddev=1.0 / math.sqrt(float(conv3_units))),
         name='weights')
     biases = tf.Variable(tf.zeros([hidden1_units]),
                          name='biases')
-    hidden1 = tf.nn.relu(tf.matmul(images, weights) + biases)
+    hidden1 = tf.nn.relu(tf.matmul(conv3, weights) + biases)
   # Hidden 2
   with tf.name_scope('hidden2'):
     weights = tf.Variable(
