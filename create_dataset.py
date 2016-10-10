@@ -104,11 +104,26 @@ def importDataset(data_type, dataset_directory):
   return images, numpy.array(labels).astype('uint8')
 
 
-def getDataset(dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/asgn/devnagari/dataset/', validation = False):
+def getDataset(label_type = 'value', 
+  dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/asgn/devnagari/dataset/', 
+  validation = False):
 
   test, test_labels = importDataset('test', dataset_directory)
   #train, train_labels = importDataset('train', dataset_directory)
   train, train_labels = (test, test_labels)
+
+  if label_type == 'array':
+    # Assuming we know that number of labels possible; 104
+    train_labels_temp = numpy.zeros([train_labels.shape[0],104])
+    for i in range(train_labels.shape[0]):
+      train_labels_temp[i][train_labels[i]] = 1
+
+    test_labels_temp = numpy.zeros([test_labels.shape[0],104])
+    for i in range(test_labels.shape[0]):
+      test_labels_temp[i][test_labels[i]] = 1
+    # Recording the temp variables into original ones
+    test_labels = test_labels_temp
+    train_labels = train_labels_temp
 
   if not validation:
     Datasets = collections.namedtuple('Datasets', ['train', 'test'])

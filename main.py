@@ -120,7 +120,7 @@ def run_training():
   # test on MNIST.
 
   #data_sets = input_data.read_data_sets(FLAGS.train_dir, FLAGS.fake_data)
-  data_sets = getDataset(dataset_directory)
+  data_sets = getDataset('value', dataset_directory)
 
   # Tell TensorFlow that the model will be built into the default Graph.
   with tf.Graph().as_default():
@@ -206,6 +206,7 @@ def run_training():
                 images_placeholder,
                 labels_placeholder,
                 data_sets.train)
+        '''
         # Evaluate against the validation set.
         print('Validation Data Eval:')
         do_eval(sess,
@@ -213,6 +214,7 @@ def run_training():
                 images_placeholder,
                 labels_placeholder,
                 data_sets.validation)
+        '''
         # Evaluate against the test set.
         print('Test Data Eval:')
         do_eval(sess,

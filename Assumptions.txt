@@ -2,4 +2,5 @@ Assumptions
 
 - Images are given in two folders: train and test
 - Each folder has all the images in .png format, and each image when input through scipy.misc is an (m,n) matrix
+- Total number of labels = 104
 - Each folder has a 'label.txt' file, which contains the label of all the images: the integer at line m at the file corresponds to the label of the image 'm-1.png'

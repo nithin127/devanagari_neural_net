@@ -3,7 +3,7 @@
 ''' This file is a modification of https://github.com/nlintz/TensorFlow-Tutorials/blob/master/05_convolutional_net.py '''
 
 import numpy as np
-import input_data
+from create_dataset import getDataset
 import tensorflow as tf
 
 batch_size = 128
@@ -39,19 +39,19 @@ def model(X, w, w2, w3, w4, w_o, p_keep_conv, p_keep_hidden):
     pyx = tf.matmul(l4, w_o)
     return pyx
 
-mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
-trX, trY, teX, teY = mnist.train.images, mnist.train.labels, mnist.test.images, mnist.test.labels
-trX = trX.reshape(-1, 28, 28, 1)  # 28x28x1 input img
-teX = teX.reshape(-1, 28, 28, 1)  # 28x28x1 input img
+dataset = getDataset()
+trX, trY, teX, teY =  dataset.train.images,  dataset.train.labels,  dataset.test.images,  dataset.test.labels
+trX = trX.reshape(-1, 64, 64, 1)  # 64x64x1 input img
+teX = teX.reshape(-1, 64, 64, 1)  # 64x64x1 input img
 
-X = tf.placeholder("float", [None, 28, 28, 1])
-Y = tf.placeholder("float", [None, 10])
+X = tf.placeholder("float", [None, 64, 64, 1])
+Y = tf.placeholder("float", [None,])
 
 w = init_weights([3, 3, 1, 32])       # 3x3x1 conv, 32 outputs
 w2 = init_weights([3, 3, 32, 64])     # 3x3x32 conv, 64 outputs
 w3 = init_weights([3, 3, 64, 128])    # 3x3x32 conv, 128 outputs
 w4 = init_weights([128 * 4 * 4, 625]) # FC 128 * 4 * 4 inputs, 625 outputs
-w_o = init_weights([625, 10])         # FC 625 inputs, 10 outputs (labels)
+w_o = init_weights([625, 104])         # FC 625 inputs, 10 outputs (labels)
 
 p_keep_conv = tf.placeholder("float")
 p_keep_hidden = tf.placeholder("float")
