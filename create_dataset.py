@@ -90,8 +90,12 @@ def importDataset(data_type, dataset_directory):
   images = []
   labels = []
   # Creating image matrix
-  for filename in glob.glob(dataset_directory + data_type + '/*.png'):
-  	im = misc.imresize(misc.imread(filename),0.2)
+  filenames = []
+  for item in glob.glob(dataset_directory + data_type + '/*.png'):
+    filenames.append(item)
+  filenames = sorted(filenames, key = len) # So that '9.png' comes before '11.png'
+  for filename in filenames:
+  	im = misc.imresize(misc.imread(filename),0.1)
   	images.append(im)
   images = numpy.array(images)
   images = images.reshape(-1,images.shape[1],images.shape[2],1) # This place a role in the convolution layers
@@ -108,9 +112,10 @@ def getDataset(label_type = 'value',
   dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/asgn/devnagari/dataset/', 
   validation = False):
 
-  test, test_labels = importDataset('test', dataset_directory)
+  #test, test_labels = importDataset('test', dataset_directory)
   #train, train_labels = importDataset('train', dataset_directory)
-  train, train_labels = (test, test_labels)
+  train, train_labels = importDataset('sample_train', dataset_directory)
+  test, test_labels = importDataset('sample_test', dataset_directory)
 
   if label_type == 'array':
     # Assuming we know that number of labels possible; 104

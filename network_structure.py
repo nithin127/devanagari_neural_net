@@ -23,14 +23,15 @@ import tensorflow as tf
 
 # The Devanagri dataset has 104 classes, representing all the different symbols.
 NUM_CLASSES = 104
-IMAGE_SIZE = 64 # After downscaling by 80%, input is 64x64x1
+IMAGE_SIZE = 32 # After downscaling by 80%, input is 64x64x1
 IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
 
 # Probability assignments for dropouts
-PROB_CONV = 0.8
-PROB_HIDD = 0.5 # We're not implementing dropout in hidden layer in this iteration
+KEEP_PROB_CONV = 1
+KEEP_PROB_HIDD = 1 # We're not implementing dropout in hidden layer in this iteration
 
-def inference(images, conv1_depth, conv2_depth, conv3_depth, hidden1_units, hidden2_units, receptive_field):
+def inference(images, conv1_depth, conv2_depth, conv3_depth, 
+              hidden1_units, hidden2_units, receptive_field):
   """Build the MNIST model up to where it may be used for inference.
 
   Args:
@@ -57,7 +58,7 @@ def inference(images, conv1_depth, conv2_depth, conv3_depth, hidden1_units, hidd
                         strides=[1, 1, 1, 1], padding='SAME'))
     conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1],             # conv1 shape=(?, 32, 32, 32)
                         strides=[1, 2, 2, 1], padding='SAME')
-    conv1 = tf.nn.dropout(conv1, PROB_CONV)
+    conv1 = tf.nn.dropout(conv1, KEEP_PROB_CONV)
 
   # Convolutional Layer 2
   with tf.name_scope('convolution2'):
@@ -69,7 +70,7 @@ def inference(images, conv1_depth, conv2_depth, conv3_depth, hidden1_units, hidd
                         strides=[1, 1, 1, 1], padding='SAME'))
     conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1],             # conv2 shape=(?, 16, 16, 64)
                         strides=[1, 2, 2, 1], padding='SAME')
-    conv2 = tf.nn.dropout(conv2, PROB_CONV)
+    conv2 = tf.nn.dropout(conv2, KEEP_PROB_CONV)
 
   # Convolutional Layer 3
   with tf.name_scope('convolution3'):
@@ -82,7 +83,7 @@ def inference(images, conv1_depth, conv2_depth, conv3_depth, hidden1_units, hidd
     conv3 = tf.nn.max_pool(conv3, ksize=[1, 2, 2, 1],             # conv2 shape=(?, 8, 8, 128)
                         strides=[1, 2, 2, 1], padding='SAME')
     conv3 = tf.reshape(conv3, [-1, SHAPE_4[0]])    # reshape to (?, 8192)
-    conv3 = tf.nn.dropout(conv3, PROB_CONV)
+    conv3 = tf.nn.dropout(conv3, KEEP_PROB_CONV)
 
   # Hidden 1
   with tf.name_scope('hidden1'):
@@ -94,7 +95,7 @@ def inference(images, conv1_depth, conv2_depth, conv3_depth, hidden1_units, hidd
     biases = tf.Variable(tf.zeros([hidden1_units]),
                          name='biases')
     hidden1 = tf.nn.relu(tf.matmul(conv3, weights) + biases)
-    hidden1 = tf.nn.dropout(hidden1, PROB_HIDD)
+    hidden1 = tf.nn.dropout(hidden1, KEEP_PROB_HIDD)
   '''
   # Hidden 2
   with tf.name_scope('hidden2'):
