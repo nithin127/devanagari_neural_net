@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
-''' This file is a modification of https://github.com/nlintz/TensorFlow-Tutorials/blob/master/05_convolutional_net.py '''
-
+import tensorflow as tf
 import numpy as np
 from create_dataset import getDataset
-import tensorflow as tf
 
-batch_size = 128
-test_size = 256
+batch_size = 12
+test_size = 25
 
 def init_weights(shape):
     return tf.Variable(tf.random_normal(shape, stddev=0.01))
@@ -39,13 +37,14 @@ def model(X, w, w2, w3, w4, w_o, p_keep_conv, p_keep_hidden):
     pyx = tf.matmul(l4, w_o)
     return pyx
 
-dataset = getDataset()
-trX, trY, teX, teY =  dataset.train.images,  dataset.train.labels,  dataset.test.images,  dataset.test.labels
-trX = trX.reshape(-1, 64, 64, 1)  # 64x64x1 input img
-teX = teX.reshape(-1, 64, 64, 1)  # 64x64x1 input img
+#mnist = input_data.read_data_sets("/tmp/mnist", one_hot=True) 
+devnagiri = getDataset(one_hot = True)
+trX, trY, teX, teY = devnagiri.train.images, devnagiri.train.labels, devnagiri.test.images, devnagiri.test.labels
+trX = trX.reshape(-1, 32, 32, 1)  # 32x32x1 input img
+teX = teX.reshape(-1, 32, 32, 1)  # 32x32x1 input img
 
-X = tf.placeholder("float", [None, 64, 64, 1])
-Y = tf.placeholder("float", [None,])
+X = tf.placeholder("float", [None, 32, 32, 1])
+Y = tf.placeholder("float", [None, 104])
 
 w = init_weights([3, 3, 1, 32])       # 3x3x1 conv, 32 outputs
 w2 = init_weights([3, 3, 32, 64])     # 3x3x32 conv, 64 outputs
@@ -66,14 +65,14 @@ with tf.Session() as sess:
     # you need to initialize all variables
     tf.initialize_all_variables().run()
 
-    for i in range(100):
+    for i in range(100000):
         training_batch = zip(range(0, len(trX), batch_size),
                              range(batch_size, len(trX)+1, batch_size))
         for start, end in training_batch:
             sess.run(train_op, feed_dict={X: trX[start:end], Y: trY[start:end],
                                           p_keep_conv: 0.8, p_keep_hidden: 0.5})
 
-        test_indices = np.arange(len(teX)) # Get a Test Batch
+        test_indices = np.arange(len(teX)) # Get A Test Batch
         np.random.shuffle(test_indices)
         test_indices = test_indices[0:test_size]
 

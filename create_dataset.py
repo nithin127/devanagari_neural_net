@@ -5,6 +5,8 @@ from scipy import misc
 
 from tensorflow.python.framework import dtypes
 
+NUM_LABELS = 104
+
 class DataSet(object):
   # This class is a modification of class 'Dataset' in tensorflow.contrib.learn.python.learn.datasets.mnist
   def __init__(self,
@@ -85,8 +87,16 @@ class DataSet(object):
     end = self._index_in_epoch
     return self._images[start:end], self._labels[start:end]
 
+def dense_to_one_hot(labels_dense, num_classes):
+  """Convert class labels from scalars to one-hot vectors."""
+  # This is taken from tensorflow.contrib.learn.python.learn.datasets.mnist
+  num_labels = labels_dense.shape[0]
+  index_offset = numpy.arange(num_labels) * num_classes
+  labels_one_hot = numpy.zeros((num_labels, num_classes))
+  labels_one_hot.flat[index_offset + labels_dense.ravel()] = 1
+  return labels_one_hot
 
-def importDataset(data_type, dataset_directory):
+def importDataset(data_type, dataset_directory, one_hot = False):
   images = []
   labels = []
   # Creating image matrix
@@ -98,37 +108,28 @@ def importDataset(data_type, dataset_directory):
   	im = misc.imresize(misc.imread(filename),0.1)
   	images.append(im)
   images = numpy.array(images)
-  images = images.reshape(-1,images.shape[1],images.shape[2],1) # This place a role in the convolution layers
+  images = images.reshape(-1,images.shape[1]*images.shape[2])
   # Creating label list
   for filename in glob.glob(dataset_directory + data_type + '/labels.txt'):
   	label_file = open(filename)
   labels = label_file.readlines()
   labels = [int(x[:-1]) for x in labels]
-  # Nothing
-  return images, numpy.array(labels).astype('uint8')
+  labels = numpy.array(labels).astype('uint8')
+  # Convert labels to one_hot encoding if necessary
+  if one_hot:
+    return images, dense_to_one_hot(labels,NUM_LABELS)
+  else:
+    return images, labels
 
+def getDataset(dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/asgn/devnagari/dataset/',
+               validation = False, one_hot = False):
 
-def getDataset(label_type = 'value', 
-  dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/asgn/devnagari/dataset/', 
-  validation = False):
-
-  #test, test_labels = importDataset('test', dataset_directory)
-  #train, train_labels = importDataset('train', dataset_directory)
-  train, train_labels = importDataset('sample_train', dataset_directory)
-  test, test_labels = importDataset('sample_test', dataset_directory)
-
-  if label_type == 'array':
-    # Assuming we know that number of labels possible; 104
-    train_labels_temp = numpy.zeros([train_labels.shape[0],104])
-    for i in range(train_labels.shape[0]):
-      train_labels_temp[i][train_labels[i]] = 1
-
-    test_labels_temp = numpy.zeros([test_labels.shape[0],104])
-    for i in range(test_labels.shape[0]):
-      test_labels_temp[i][test_labels[i]] = 1
-    # Recording the temp variables into original ones
-    test_labels = test_labels_temp
-    train_labels = train_labels_temp
+  test, test_labels = importDataset('test', dataset_directory)
+  train, train_labels = importDataset('train', dataset_directory)
+  #train, train_labels = importDataset('sample_train', dataset_directory)
+  #test, test_labels = importDataset('sample_test', dataset_directory)
+  #test, test_labels = importDataset('sample', dataset_directory, one_hot)
+  #train, train_labels = importDataset('sample', dataset_directory, one_hot)
 
   if not validation:
     Datasets = collections.namedtuple('Datasets', ['train', 'test'])
