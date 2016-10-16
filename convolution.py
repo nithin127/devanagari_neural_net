@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+import time
+import glob
 import tensorflow as tf
 import numpy as np
-from readData import image as dev_images
-
+#from readData import image as dev_images
+from create_dataset import getDataset
 batch_size = 128
-test_size = 256
+# test_size = 256, full test
 
 def init_weights(shape):
     return tf.Variable(tf.random_normal(shape, stddev=0.01))
@@ -37,7 +39,9 @@ def model(X, w, w2, w3, w4, w_o, p_keep_conv, p_keep_hidden):
     pyx = tf.matmul(l4, w_o)
     return pyx
 
-trX, trY, teX, teY = dev_images()
+#trX, trY, teX, teY = dev_images()
+trX, trY, teX, teY = getDataset()
+print "Reading Dataset Complete"
 
 X = tf.placeholder("float", [None, 28, 28, 1])
 Y = tf.placeholder("float", [None, 104])
@@ -63,24 +67,44 @@ try:
     with tf.Session() as sess:
         # you need to initialize all variables
         tf.initialize_all_variables().run()
+        filenames = []
+        for item in glob.glob('/tmp/model_*.ckpt'):
+            filenames.append(item)
+        if filenames:
+            filenames = sorted(filenames, key = len) # So that '9.png' comes before '11.png'
+            saver.restore(sess, filenames[-1])
+            print "Model restored: {}".format(filenames[-1])
 
         for i in range(100):
+            start_time = time.time()
             training_batch = zip(range(0, len(trX), batch_size),
                                  range(batch_size, len(trX)+1, batch_size))
             for start, end in training_batch:
                 sess.run(train_op, feed_dict={X: trX[start:end], Y: trY[start:end],
                                               p_keep_conv: 0.8, p_keep_hidden: 0.5})
 
+            train_time = time.time() - start_time
+            start_time = time.time()
+
             test_indices = np.arange(len(teX)) # Get A Test Batch
             np.random.shuffle(test_indices)
-            test_indices = test_indices[0:test_size]
+            #test_indices = test_indices[0:test_size]
 
             save_path = saver.save(sess, "/tmp/model_{}.ckpt".format(i))
-            print(i, np.mean(np.argmax(teY[test_indices], axis=1) ==
-                             sess.run(predict_op, feed_dict={X: teX[test_indices],
-                                                             Y: teY[test_indices],
+            print "Iterations: {0}, Train Accuracy: {2}, Test Accuracy: {1}".format(
+                            i, np.mean(np.argmax(teY[:], axis=1) ==
+                            sess.run(predict_op, feed_dict={X: teX[:],
+                                                             Y: teY[:],
+                                                             p_keep_conv: 1.0,
+                                                             p_keep_hidden: 1.0}))
+                            , np.mean(np.argmax(trY[:], axis=1) ==
+                             sess.run(predict_op, feed_dict={X: trX[:],
+                                                             Y: trY[:],
                                                              p_keep_conv: 1.0,
                                                              p_keep_hidden: 1.0})))
+            eval_time = time.time() - start_time
+            print "Train time: {}, Eval time: {}".format(train_time, eval_time)
+
 except KeyboardInterrupt:
     print "Program terminated by user; saving model to '/tmp/model_final.ckpt'"
     save_path = saver.save(sess, "/tmp/model_final.ckpt")

@@ -7,87 +7,7 @@ from tensorflow.python.framework import dtypes
 
 NUM_LABELS = 104
 
-class DataSet(object):
-  # This class is a modification of class 'Dataset' in tensorflow.contrib.learn.python.learn.datasets.mnist
-  def __init__(self,
-               images,
-               labels,
-               fake_data=False,
-               one_hot=False,
-               dtype=dtypes.float32):
-
-    """Construct a DataSet. one_hot arg is used only if fake_data is true.  `dtype` can be either 
-    `uint8` to leave the input as `[0, 255]`, or `float32` to rescale into `[0, 1]` """
-
-    dtype = dtypes.as_dtype(dtype).base_dtype
-    if dtype not in (dtypes.uint8, dtypes.float32):
-      raise TypeError('Invalid image dtype %r, expected uint8 or float32' %
-                      dtype)
-    if fake_data:
-      self._num_examples = 10000
-      self.one_hot = one_hot
-    else:
-      assert images.shape[0] == labels.shape[0], (
-          'images.shape: %s labels.shape: %s' % (images.shape, labels.shape))
-      self._num_examples = images.shape[0]
-
-      # Convert shape from [num examples, rows, columns, depth]
-      # to [num examples, rows*columns] (assuming depth == 1)
-      if dtype == dtypes.float32:
-        # Convert from [0, 255] -> [0.0, 1.0].
-        images = images.astype(numpy.float32)
-        images = numpy.multiply(images, 1.0 / 255.0)
-    
-    self._images = images
-    self._labels = labels
-    self._epochs_completed = 0
-    self._index_in_epoch = 0
-
-  @property
-  def images(self):
-    return self._images
-
-  @property
-  def labels(self):
-    return self._labels
-
-  @property
-  def num_examples(self):
-    return self._num_examples
-
-  @property
-  def epochs_completed(self):
-    return self._epochs_completed
-
-  def next_batch(self, batch_size, fake_data=False):
-    """Return the next `batch_size` examples from this data set."""
-    if fake_data:
-      fake_image = [1] * 1024
-      if self.one_hot:
-        fake_label = [1] + [0] * 9
-      else:
-        fake_label = 0
-      return [fake_image for _ in xrange(batch_size)], [
-          fake_label for _ in xrange(batch_size)
-      ]
-    start = self._index_in_epoch
-    self._index_in_epoch += batch_size
-    if self._index_in_epoch > self._num_examples:
-      # Finished epoch
-      self._epochs_completed += 1
-      # Shuffle the data
-      perm = numpy.arange(self._num_examples)
-      numpy.random.shuffle(perm)
-      self._images = self._images[perm]
-      self._labels = self._labels[perm]
-      # Start next epoch
-      start = 0
-      self._index_in_epoch = batch_size
-      assert batch_size <= self._num_examples
-    end = self._index_in_epoch
-    return self._images[start:end], self._labels[start:end]
-
-def dense_to_one_hot(labels_dense, num_classes):
+def dense_to_one_hot(labels_dense, num_classes = NUM_LABELS):
   """Convert class labels from scalars to one-hot vectors."""
   # This is taken from tensorflow.contrib.learn.python.learn.datasets.mnist
   num_labels = labels_dense.shape[0]
@@ -96,7 +16,7 @@ def dense_to_one_hot(labels_dense, num_classes):
   labels_one_hot.flat[index_offset + labels_dense.ravel()] = 1
   return labels_one_hot
 
-def importDataset(data_type, dataset_directory, one_hot = False):
+def importDataset(data_type, dataset_directory, one_hot = True):
   images = []
   labels = []
   # Creating image matrix
@@ -105,10 +25,10 @@ def importDataset(data_type, dataset_directory, one_hot = False):
     filenames.append(item)
   filenames = sorted(filenames, key = len) # So that '9.png' comes before '11.png'
   for filename in filenames:
-  	im = misc.imresize(misc.imread(filename),0.1)
+  	im = misc.imresize(misc.imread(filename),(28,28))
   	images.append(im)
-  images = numpy.array(images)
-  images = images.reshape(-1,images.shape[1]*images.shape[2])
+  images = (255.0 - numpy.array(images))/255.0 # Highly important, apparently
+  images = images.reshape(-1,images.shape[1],images.shape[2],1)
   # Creating label list
   for filename in glob.glob(dataset_directory + data_type + '/labels.txt'):
   	label_file = open(filename)
@@ -122,7 +42,7 @@ def importDataset(data_type, dataset_directory, one_hot = False):
     return images, labels
 
 def getDataset(dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/asgn/devnagari/dataset/',
-               validation = False, one_hot = False):
+               validation = False, one_hot = True):
 
   test, test_labels = importDataset('test', dataset_directory)
   train, train_labels = importDataset('train', dataset_directory)
@@ -132,12 +52,8 @@ def getDataset(dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/a
   #train, train_labels = importDataset('sample', dataset_directory, one_hot)
 
   if not validation:
-    Datasets = collections.namedtuple('Datasets', ['train', 'test'])
-    train = DataSet(train, train_labels)
-    test = DataSet(test, test_labels)
-    return Datasets(train=train, test=test)
+    return train, train_labels, test, test_labels
   else:
-    Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
     # Shuffling the training dataset
     perm = numpy.arange(train.shapep[0])
     numpy.random.shuffle(perm)
@@ -148,8 +64,5 @@ def getDataset(dataset_directory = '/Users/nithinvasisth/Documents/advanced_ml/a
     train2 = train[:int(round(train.shape[0]*0.9)),:]
     valid_labels = train_labels[int(round(train.shape[0]*0.9)):]
     train_labels2 = train_labels[:int(round(train.shape[0]*0.9))]
-    # Embedding the information into DataSet class
-    train = DataSet(train2, train_labels2)
-    valid = DataSet(valid, valid_labels)
-    test = DataSet(test, test_labels)
-    return Datasets(train=train, validation=valid, test=test)
+
+    return train2, train_labels2, valid, valid_labels, test, test_labels
